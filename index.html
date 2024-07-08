@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Math Solver</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background-color: #f2f2f2;
+        }
+        h1 {
+            text-align: center;
+            color: #333;
+        }
+        #container {
+            max-width: 600px;
+            margin: 0 auto;
+            background-color: #fff;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        }
+        textarea {
+            width: 95%;
+            height: 100px;
+            margin-bottom: 10px;
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            resize: none;
+        }
+        button {
+            padding: 10px 20px;
+            font-size: 16px;
+            cursor: pointer;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 5px;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+        .result {
+            margin-top: 20px;
+            font-size: 18px;
+        }
+        .error {
+            color: red;
+        }
+        .options {
+            margin-top: 10px;
+        }
+        label {
+            font-weight: bold;
+            margin-right: 10px;
+        }
+        select, input[type="number"] {
+            padding: 8px;
+            border-radius: 5px;
+            border: 1px solid #ccc;
+        }
+        .calculator {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+        .calculator-item {
+            flex-basis: 30%;
+            margin-bottom: 10px;
+        }
+        .calculator-item label {
+            display: block;
+            margin-bottom: 5px;
+        }
+        .calculator-item input[type="text"] {
+            width: 100%;
+            padding: 8px;
+            border-radius: 5px;
+            border: 1px solid #ccc;
+        }
+        .calculator-item button {
+            width: 100%;
+        }
+        #steps {
+            margin-top: 20px;
+        }
+        #steps h2 {
+            font-size: 20px;
+            margin-bottom: 10px;
+        }
+        #steps ul {
+            padding-left: 20px;
+        }
+        #steps li {
+            margin-bottom: 5px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Math Solver</h1>
+    <div id="container">
+        <textarea id="input" placeholder="Enter math expression"></textarea>
+        <div class="options">
+            <label for="expressionType">Expression Type:</label>
+            <select id="expressionType">
+                <option value="basic">Basic Arithmetic</option>
+                <option value="trigonometric">Trigonometric</option>
+                <option value="logarithmic">Logarithmic</option>
+                <option value="differentiation">Differentiation</option>
+                <option value="integration">Integration</option>
+            </select>
+            <label for="precision">Decimal Precision:</label>
+            <input type="number" id="precision" min="0" max="10" value="2">
+        </div>
+        <div class="calculator">
+            <div class="calculator-item">
+                <label for="variable">Variable:</label>
+                <input type="text" id="variable" placeholder="x">
+            </div>
+            <div class="calculator-item">
+                <label for="lowerBound">Lower Bound:</label>
+                <input type="text" id="lowerBound" placeholder="0">
+            </div>
+            <div class="calculator-item">
+                <label for="upperBound">Upper Bound:</label>
+                <input type="text" id="upperBound" placeholder="1">
+            </div>
+        </div>
+        <button onclick="solve()">Solve</button>
+        <div id="solution" class="result"></div>
+        <div id="steps"></div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjs/9.5.0/math.min.js"></script>
+    <script>
+        function solve() {
+            var input = document.getElementById("input").value.trim();
+            var expressionType = document.getElementById("expressionType").value;
+            var precision = parseInt(document.getElementById("precision").value);
+            var variable = document.getElementById("variable").value.trim() || 'x';
+            var lowerBound = document.getElementById("lowerBound").value.trim();
+            var upperBound = document.getElementById("upperBound").value.trim();
+
+            if (input !== "") {
+                try {
+                    var result = evaluateExpression(input, expressionType, precision, variable, lowerBound, upperBound);
+                    document.getElementById("solution").innerHTML = "Result: <strong>" + result + "</strong>";
+                    showSteps(input, expressionType, variable, lowerBound, upperBound);
+                } catch (error) {
+                    document.getElementById("solution").innerHTML = "<span class='error'>Invalid expression! " + error.message + "</span>";
+                }
+            }
+        }
+
+        function evaluateExpression(expression, type, precision, variable, lowerBound, upperBound) {
+            var result;
+
+            switch (type) {
+                case "basic":
+                    result = math.evaluate(expression).toFixed(precision);
+                    break;
+                case "trigonometric":
+                    result = math.simplify(expression).toString();
+                    break;
+                case "logarithmic":
+                    result = math.simplify('log(' + expression + ')').toString();
+                    break;
+                case "differentiation":
+                    result = math.derivative(expression, variable).toString();
+                    break;
+                case "integration":
+                    result = numericIntegration(expression, variable, lowerBound, upperBound, precision);
+                    break;
+                default:
+                    throw new Error("Unsupported expression type.");
+            }
+
+            return result;
+        }
+
+        function numericIntegration(expression, variable, lowerBound, upperBound, precision) {
+            var f = math.compile(expression);
+            var a = parseFloat(lowerBound);
+            var b = parseFloat(upperBound);
+            var n = 1000;
+            var sum = 0;
+            var delta = (b - a) / n;
+            for (var i = 1; i < n; i++) {
+                sum += f.evaluate({ [variable]: a + i * delta });
+            }
+            sum += (f.evaluate({ [variable]: a }) + f.evaluate({ [variable]: b })) / 2;
+            var result = sum * delta;
+            return result.toFixed(precision);
+        }
+
+        function showSteps(expression, type, variable, lowerBound, upperBound) {
+            var stepsContainer = document.getElementById("steps");
+            stepsContainer.innerHTML = "";
+
+            var steps = [];
+            switch (type) {
+                case "basic":
+                    steps.push("Evaluate: " + expression);
+                    steps.push("Result: " + math.evaluate(expression).toString());
+                    break;
+                case "trigonometric":
+                    steps.push("Simplify: " + expression);
+                    steps.push("Result: " + math.simplify(expression).toString());
+                    break;
+                case "logarithmic":
+                    steps.push("Evaluate logarithm: log(" + expression + ")");
+                    steps.push("Result: " + math.simplify('log(' + expression + ')').toString());
+                    break;
+                case "differentiation":
+                    steps.push("Differentiate: " + expression + " with respect to " + variable);
+                    steps.push("Result: " + math.derivative(expression, variable).toString());
+                    break;
+                case "integration":
+                    steps.push("Integrate: " + expression + " with respect to " + variable + " from " + lowerBound + " to " + upperBound);
+                    steps.push("Result: " + numericIntegration(expression, variable, lowerBound, upperBound, 5));  // Intermediate precision for steps
+                    break;
+                default:
+                    steps.push("Unsupported expression type.");
+            }
+
+            var stepsList = "<h2>Steps:</h2><ul>";
+            steps.forEach(step => {
+                stepsList += "<li>" + step + "</li>";
+            });
+            stepsList += "</ul>";
+            stepsContainer.innerHTML = stepsList;
+        }
+        function integrationSteps(expression, variable) {
+      var steps = [];
+      steps.push("Integrate the expression with respect to " + variable + ": ∫ (" + expression + ") d" + variable);
+      steps.push("Apply integration rules to simplify the expression.");
+      steps.push("Get the integral: " + numericIntegration(expression, variable, lowerBound, upperBound, precision).toString());
+      return steps;
+    }
+    </script>
+</body>
+</html>
